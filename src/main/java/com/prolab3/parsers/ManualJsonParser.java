@@ -13,7 +13,6 @@ public class ManualJsonParser {
         List<Makale> makaleler = new ArrayList<>();
         StringBuilder jsonContent = new StringBuilder();
 
-        // 1. Dosyayı oku
         try (BufferedReader br = new BufferedReader(new FileReader(new File(filePath)))) {
             String line;
             while ((line = br.readLine()) != null) {
@@ -25,12 +24,10 @@ public class ManualJsonParser {
         }
 
         String content = jsonContent.toString();
-        // Dış köşeli parantezleri at
         if (content.startsWith("[") && content.endsWith("]")) {
             content = content.substring(1, content.length() - 1);
         }
 
-        // 2. Karakter bazlı obje ayırma (Bracket Counting)
         int braceCount = 0;
         int start = 0;
         boolean inQuote = false;
@@ -38,7 +35,6 @@ public class ManualJsonParser {
         for (int i = 0; i < content.length(); i++) {
             char c = content.charAt(i);
 
-            // Tırnak kontrolü (escape edilmiş tırnakları \" atla)
             if (c == '"' && (i == 0 || content.charAt(i - 1) != '\\')) {
                 inQuote = !inQuote;
             }
@@ -50,7 +46,6 @@ public class ManualJsonParser {
                 } else if (c == '}') {
                     braceCount--;
                     if (braceCount == 0) {
-                        // Bir obje bitti
                         String objStr = content.substring(start, i + 1);
                         parseSingleObject(objStr, makaleler);
                     }
@@ -80,11 +75,10 @@ public class ManualJsonParser {
                 list.add(new Makale(id, title, year, authors, refs));
             }
         } catch (Exception e) {
-            System.err.println("Objeyi parse ederken hata: " + e.getMessage());
+            System.err.println("Hata: " + e.getMessage());
         }
     }
 
-    // Basit string arama fonksiyonu
     private String extractValue(String source, String key) {
         int keyIndex = source.indexOf(key);
         if (keyIndex == -1) return null;
@@ -92,7 +86,6 @@ public class ManualJsonParser {
         int separatorIndex = source.indexOf(":", keyIndex);
         if (separatorIndex == -1) return null;
 
-        // Değerin başladığı yer
         int valueStart = separatorIndex + 1;
         while (valueStart < source.length() && Character.isWhitespace(source.charAt(valueStart))) {
             valueStart++;
@@ -100,22 +93,15 @@ public class ManualJsonParser {
 
         char startChar = source.charAt(valueStart);
         
-        // Eğer string ise ("...")
         if (startChar == '"') {
-            int valueEnd = source.indexOf("", valueStart + 1);
-            // String içinde escape tırnak varsa, basit parser patlayabilir ama 
-            // şimdilik en yakın kapanış tırnağını buluyoruz. 
-            // Daha sağlam olması için escape kontrolü eklenebilir.
+            int valueEnd = source.indexOf("\"", valueStart + 1);
             while (valueEnd != -1 && source.charAt(valueEnd - 1) == '\\') {
-                 valueEnd = source.indexOf("", valueEnd + 1);
+                 valueEnd = source.indexOf("\"", valueEnd + 1);
             }
-            
             if (valueEnd != -1) {
                 return source.substring(valueStart + 1, valueEnd);
             }
-        } 
-        // Eğer sayı veya boolean veya null ise
-        else {
+        } else {
             int valueEnd = valueStart;
             while (valueEnd < source.length() && (Character.isLetterOrDigit(source.charAt(valueEnd)) || source.charAt(valueEnd) == '.')) {
                 valueEnd++;
@@ -125,7 +111,6 @@ public class ManualJsonParser {
         return null;
     }
 
-    // Basit liste ayıklayıcı
     private List<String> extractList(String source, String key) {
         List<String> list = new ArrayList<>();
         int keyIndex = source.indexOf(key);
@@ -134,7 +119,6 @@ public class ManualJsonParser {
         int listStart = source.indexOf("[", keyIndex);
         if (listStart == -1) return list;
 
-        // Listenin bitişini bul (Bracket counting)
         int listEnd = listStart;
         int count = 0;
         for (int i = listStart; i < source.length(); i++) {
@@ -149,7 +133,6 @@ public class ManualJsonParser {
         }
 
         String listContent = source.substring(listStart + 1, listEnd);
-        
         boolean inQ = false;
         StringBuilder currentItem = new StringBuilder();
         

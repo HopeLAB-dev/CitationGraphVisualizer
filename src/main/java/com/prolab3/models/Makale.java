@@ -4,24 +4,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Makale {
-    public String id;
-    public String title;
-    public int year;
-    public List<String> authors = new ArrayList<>();
-    public List<String> referencedWorks = new ArrayList<>();
-    public int citationCount = 0;
+    private String id;
+    private String title;
+    private int year;
+    private List<String> authors;
+    private List<String> referencedWorks;
 
     public Makale(String id, String title, int year, List<String> authors, List<String> referencedWorks) {
         this.id = id;
         this.title = title;
         this.year = year;
-        if (authors != null) this.authors = authors;
-        if (referencedWorks != null) this.referencedWorks = referencedWorks;
+        this.authors = authors != null ? authors : new ArrayList<>();
+        this.referencedWorks = referencedWorks != null ? referencedWorks : new ArrayList<>();
     }
-    
-    // Basit olması için getter/setter yerine public field kullandım ama toString lazım olabilir
-    @Override
-    public String toString() {
-        return title + " (" + year + ")";
-    }
+
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public int getYear() { return year; }
+    public List<String> getAuthors() { return authors; }
+    public List<String> getReferencedWorks() { return referencedWorks; }
 }

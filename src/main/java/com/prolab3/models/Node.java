@@ -5,24 +5,53 @@ import java.util.List;
 import javafx.scene.paint.Color;
 
 public class Node {
-    public Makale article;
-    public List<Edge> incomingEdges = new ArrayList<>();
-    public List<Edge> outgoingEdges = new ArrayList<>();
-    
+    // PDF isterleri: id, authors, title, year, citationCount
+    public String id;
+    public String title;
+    public List<String> authors;
+    public int year;
+    public int citationCount;
+
+    // Graf Yapısı
+    public List<Node> outgoingEdges = new ArrayList<>(); // Referans verdikleri
+    public List<Node> incomingEdges = new ArrayList<>(); // Atıf yapanlar
+
     // Analiz Sonuçları
     public int hIndex = 0;
     public double betweenness = 0.0;
     
     // Görselleştirme
-    public double x;
-    public double y;
-    public Color color = Color.BLUE; // Varsayılan renk
-    public double radius = 5.0;      // Varsayılan boyut
+    public double x, y;
+    public Color color = Color.LIGHTBLUE; 
+    public double radius = 15.0;
 
-    public Node(Makale article) {
-        this.article = article;
-        // Rastgele dağıt ama çok kenarlara gelmesin
-        this.x = 50 + Math.random() * 700;
-        this.y = 50 + Math.random() * 500;
+    public Node(String id, String title, List<String> authors, int year) {
+        this.id = id;
+        this.title = title;
+        this.authors = authors != null ? authors : new ArrayList<>();
+        this.year = year;
+        this.citationCount = 0;
+        
+        // Rastgele başlangıç konumu
+        this.x = Math.random() * 800;
+        this.y = Math.random() * 600;
+    }
+    
+    public void addOutgoing(Node target) {
+        if (!outgoingEdges.contains(target)) {
+            outgoingEdges.add(target);
+        }
+    }
+    
+    public void addIncoming(Node source) {
+        if (!incomingEdges.contains(source)) {
+            incomingEdges.add(source);
+            citationCount++;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return title;
     }
 }
