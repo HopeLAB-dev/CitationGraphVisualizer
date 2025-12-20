@@ -62,6 +62,9 @@ public class Main extends Application {
     // Animasyon (Force Directed Layout için)
     private AnimationTimer timer;
     private boolean simulationRunning = false;
+    
+    // Hover Durumu
+    private Node hoveredNode = null;
 
     public static void main(String[] args) {
         launch(args);
@@ -170,27 +173,114 @@ public class Main extends Application {
                 ManualJsonParser parser = new ManualJsonParser();
                 List<com.prolab3.models.Makale> rawArticles = parser.parse(file.getAbsolutePath());
                 
+                // ID Sıralaması (Yeşil Kenarlar İçin)
+                rawArticles.sort(Comparator.comparing(com.prolab3.models.Makale::getId));
+                
                 fullGraph = new Graph();
+                Node prevNode = null;
+                
+                // Düğümleri oluştur ve ID sırasına göre bağla (Yeşil Kenar Hazırlığı)
                 for (com.prolab3.models.Makale m : rawArticles) {
-                    fullGraph.addNode(new Node(m.getId(), m.getTitle(), m.getAuthors(), m.getYear()));
+                    Node newNode = new Node(m.getId(), m.getTitle(), m.getAuthors(), m.getYear());
+                    fullGraph.addNode(newNode);
+                    
+                    if (prevNode != null) {
+                        prevNode.nextById = newNode;
+                    }
+                    prevNode = newNode;
                 }
+                
+                // Siyah Kenarları (Referansları) Ekle
                 for (com.prolab3.models.Makale m : rawArticles) {
                     for (String refId : m.getReferencedWorks()) {
                         fullGraph.addEdge(m.getId(), refId);
                     }
                 }
                 
+                // İstatistikleri Hesapla
+                Node mostCited = null;
+                Node mostRef = null;
+                int maxCited = -1;
+                int maxRef = -1;
+                
+                for(Node n : fullGraph.getAllNodes()) {
+                    if(n.citationCount > maxCited) {
+                        maxCited = n.citationCount;
+                        mostCited = n;
+                    }
+                    if(n.outgoingEdges.size() > maxRef) {
+                        maxRef = n.outgoingEdges.size();
+                        mostRef = n;
+                    }
+                }
+                
+                final Node fMostCited = mostCited;
+                final Node fMostRef = mostRef;
+
                 javafx.application.Platform.runLater(() -> {
                     statusLabel.setText(fullGraph.nodes.size() + " makale yüklendi.");
-                    infoArea.setText("VERİ YÜKLENDİ:\n" +
-                            "Makale Sayısı: " + fullGraph.nodes.size() + "\n" +
-                            "Bağlantı Sayısı: " + fullGraph.totalEdges + "\n\n" +
-                            "Başlamak için bir ID aratın.");
+                    
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("VERİ YÜKLENDİ:\n");
+                    sb.append("Makale Sayısı: ").append(fullGraph.nodes.size()).append("\n");
+                    sb.append("Toplam Atıf (Kenar): ").append(fullGraph.totalEdges).append("\n");
+                    sb.append("────────────────────────\n");
+                    
+                    if(fMostCited != null) {
+                        sb.append("En Çok Atıf Alan:\n");
+                        sb.append(" ID: ").append(fMostCited.id).append("\n");
+                        sb.append(" Sayı: ").append(fMostCited.citationCount).append("\n");
+                    }
+                    sb.append("\n");
+                    if(fMostRef != null) {
+                        sb.append("En Çok Ref. Veren:\n");
+                        sb.append(" ID: ").append(fMostRef.id).append("\n");
+                        sb.append(" Sayı: ").append(fMostRef.outgoingEdges.size()).append("\n");
+                    }
+                    
+                    sb.append("\nBaşlamak için bir ID aratın.");
+                    infoArea.setText(sb.toString());
                             
-                    // Test için ilk ID'yi arama kutusuna koy
-                    if(!rawArticles.isEmpty()) searchField.setText(rawArticles.get(0).getId());
+                    // Dosya yüklendiğinde TÜM grafı göster (Performans limiti dahilinde)
+                    showAllNodes();
                 });
             }).start();
+        }
+    }
+    
+    // Yardımcı Metot: Tüm grafı göster
+    private void showAllNodes() {
+        visualGraph.clear();
+        clickDepth = 0;
+        
+        List<Node> allNodes = fullGraph.getAllNodes();
+        
+        // Çok fazla düğüm varsa uyarı ver ve bir kısmını göster (örn: 500)
+        // Eğer hepsi isteniyorsa limit artırılabilir ama JavaFX Canvas binlerce çizimde yavaşlayabilir.
+        int limit = 300; 
+        int count = 0;
+        double radius = 400.0;
+        
+        for(Node n : allNodes) {
+            if(count++ > limit) break;
+            
+            addNodeToVisual(n, Color.LIGHTGRAY);
+            // Rastgele dağıt
+            n.x = (Math.random() - 0.5) * radius * 2; 
+            n.y = (Math.random() - 0.5) * radius * 2;
+        }
+        
+        updateVisualEdges();
+        
+        // Kamerayı merkeze sıfırla
+        translateX = canvas.getWidth() / 2;
+        translateY = canvas.getHeight() / 2;
+        scale = 0.8; // Biraz uzaklaşarak başla
+        
+        simulationRunning = true;
+        
+        if (allNodes.size() > limit) {
+             infoArea.appendText("\n\nUYARI: Performans için sadece ilk " + limit + " makale gösteriliyor.\nTam analiz için ID aratın.");
         }
     }
 
@@ -291,19 +381,21 @@ public class Main extends Application {
     
     // --- ZOOM & PAN MANTIĞI ---
     private void handleScroll(ScrollEvent e) {
-        double zoomFactor = 1.1;
-        if (e.getDeltaY() < 0) {
-            zoomFactor = 1 / zoomFactor;
-        }
+        double zoomFactor = (e.getDeltaY() > 0) ? 1.1 : 0.9;
         
-        // Mouse pozisyonuna göre zoom
-        double f = (scale * zoomFactor) - scale;
-        double dx = e.getX() - translateX;
-        double dy = e.getY() - translateY;
-        
-        translateX -= f * dx / scale;
-        translateY -= f * dy / scale;
+        double oldScale = scale;
         scale *= zoomFactor;
+        
+        // Zoom sınırlarını uygula
+        if (scale < 0.05) scale = 0.05;
+        if (scale > 20.0) scale = 20.0;
+        
+        // Gerçek zoom oranını hesapla (sınırlara takılmış olabilir)
+        double actualZoom = scale / oldScale;
+        
+        // Mouse'un olduğu noktayı sabit tutacak şekilde translateX/Y güncelle
+        translateX = e.getX() - (e.getX() - translateX) * actualZoom;
+        translateY = e.getY() - (e.getY() - translateY) * actualZoom;
         
         draw();
     }
@@ -324,8 +416,13 @@ public class Main extends Application {
         double worldX = (e.getX() - translateX) / scale;
         double worldY = (e.getY() - translateY) / scale;
         
-        Node hovered = findNodeAt(worldX, worldY);
-        // İmleç değişimi yapılabilir (Cursor.HAND)
+        Node prevHover = hoveredNode;
+        hoveredNode = findNodeAt(worldX, worldY);
+        
+        // Sadece değişim varsa yeniden çiz (Performans)
+        if (prevHover != hoveredNode) {
+            draw();
+        }
     }
 
     // --- FİZİK MOTORU (Force Directed Layout - Basit) ---
@@ -405,15 +502,29 @@ public class Main extends Application {
         gc.translate(translateX, translateY);
         gc.scale(scale, scale);
         
-        // Kenarlar
-        gc.setStroke(Color.GRAY);
-        gc.setLineWidth(1.0); // Zoom'dan etkilenir, ince kalmasını isterseniz 1/scale yapın
-        
         List<Node> nodes = visualGraph.getAllNodes();
+
+        // 1. Yeşil Kenarlar (ID Sırası) - En altta çiz
+        gc.setStroke(Color.LIGHTGREEN);
+        gc.setLineWidth(1.5); // Yeşil kenarlar daha belirgin olabilir
+        for (Node n : nodes) {
+            if (n.nextById != null) {
+                Node next = visualGraph.getNode(n.nextById.id);
+                // Eğer ID komşusu da ekrandaysa yeşil çizgi çek
+                if (next != null) {
+                     // Ok yerine düz çizgi veya ok olabilir. PDF "Yeşil kenarlar" diyor.
+                     // Genelde flow'u göstermek için ok iyidir ama karışıklığı önlemek için düz çizgi yapıyoruz.
+                     gc.strokeLine(n.x, n.y, next.x, next.y);
+                }
+            }
+        }
+        
+        // 2. Siyah Kenarlar (Referanslar)
+        gc.setStroke(Color.GRAY);
+        gc.setLineWidth(1.0); 
         
         for (Node n : nodes) {
             Node realSource = fullGraph.getNode(n.id);
-            // Sadece görsel grafta var olan hedeflere çizgi çek
             for (Node target : realSource.outgoingEdges) {
                 Node vTarget = visualGraph.getNode(target.id);
                 if (vTarget != null) {
@@ -422,7 +533,7 @@ public class Main extends Application {
             }
         }
         
-        // Düğümler
+        // 3. Düğümler
         for (Node n : nodes) {
             gc.setFill(n.color);
             gc.fillOval(n.x - n.radius, n.y - n.radius, n.radius*2, n.radius*2);
@@ -432,12 +543,57 @@ public class Main extends Application {
             gc.setLineWidth(1.0);
             gc.strokeOval(n.x - n.radius, n.y - n.radius, n.radius*2, n.radius*2);
             
-            // Metin (Performans için sadece yakınsak çizilebilir)
-            // Çok uzaklaşınca metni gizle
+            // Metin
             if (scale > 0.5) {
                 gc.setFill(Color.BLACK);
                 gc.fillText(n.id, n.x - 10, n.y - 15);
             }
+        }
+        
+        // 4. Hover Bilgi Kartı (Tooltip) - En üstte
+        if (hoveredNode != null) {
+            drawTooltip(hoveredNode);
+        }
+    }
+    
+    private void drawTooltip(Node n) {
+        // Transformu sıfırla ki tooltip zoom'dan etkilenmesin (UI elemanı gibi dursun)
+        // Veya zoomlu koordinatta çizilsin. Zoomlu olması daha doğal durabilir node yanında.
+        
+        double infoX = n.x + n.radius + 10;
+        double infoY = n.y - 50;
+        
+        // İçerik Hazırla
+        String authors = String.join(", ", n.authors);
+        if(authors.length() > 30) authors = authors.substring(0, 27) + "...";
+        String title = n.title;
+        if(title.length() > 30) title = title.substring(0, 27) + "...";
+        
+        String[] lines = {
+            "ID: " + n.id,
+            "Yazar: " + authors,
+            "Başlık: " + title,
+            "Yıl: " + n.year,
+            "Atıf: " + n.citationCount
+        };
+        
+        // Kutu Boyutları
+        double width = 220;
+        double lineHeight = 15;
+        double height = lines.length * lineHeight + 20;
+        
+        // Arkaplan
+        gc.setFill(Color.rgb(255, 255, 220, 0.9)); // Hafif sarımsı, şeffaf
+        gc.setStroke(Color.BLACK);
+        gc.setLineWidth(1);
+        gc.fillRect(infoX, infoY, width, height);
+        gc.strokeRect(infoX, infoY, width, height);
+        
+        // Yazı
+        gc.setFill(Color.BLACK);
+        // Fontu biraz küçültmek gerekebilir, varsayılan fontu kullanıyoruz
+        for(int i=0; i<lines.length; i++) {
+            gc.fillText(lines[i], infoX + 10, infoY + 20 + (i * lineHeight));
         }
     }
     
@@ -570,20 +726,30 @@ public class Main extends Application {
                     clickDepth = 0;
                     
                     int count = 0;
-                    double radius = 300;
+                    double radius = 400.0;
+                    // K-Core sonucunda limit daha yüksek olabilir
+                    int limit = 500;
+                    
                     for(String id : survivors) {
-                        if(count++ > 150) break; // Performans için limit
+                        if(count++ > limit) break; 
                         Node n = fullGraph.getNode(id);
-                        addNodeToVisual(n, Color.DEEPPINK);
-                        // Rastgele dağıt (force layout düzeltecek)
-                        n.x = canvas.getWidth()/2 + (Math.random()-0.5)*radius;
-                        n.y = canvas.getHeight()/2 + (Math.random()-0.5)*radius;
+                        if (n != null) {
+                            addNodeToVisual(n, Color.DEEPPINK);
+                            // Merkez etrafına dağıt
+                            n.x = (Math.random() - 0.5) * radius * 2;
+                            n.y = (Math.random() - 0.5) * radius * 2;
+                        }
                     }
                     updateVisualEdges();
                     
+                    // Kamerayı sıfırla ki sonuç görünsün
+                    translateX = canvas.getWidth() / 2;
+                    translateY = canvas.getHeight() / 2;
+                    scale = 0.8;
+                    
                     infoArea.setText("K-Core (" + k + ") Sonuç:\n" +
                             "Toplam Kalan: " + survivors.size() + "\n" +
-                            "(Performans için ilk 150 tanesi görselleştirildi)");
+                            "(Performans için ilk " + limit + " tanesi görselleştirildi)");
                 });
             }).start();
             

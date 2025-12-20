@@ -15,6 +15,7 @@ public class Node {
     // Graf Yapısı
     public List<Node> outgoingEdges = new ArrayList<>(); // Referans verdikleri
     public List<Node> incomingEdges = new ArrayList<>(); // Atıf yapanlar
+    public Node nextById; // Yeşil kenar için (ID sırasına göre bir sonraki)
 
     // Analiz Sonuçları
     public int hIndex = 0;
