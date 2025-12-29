@@ -7,42 +7,37 @@ public class Article {
 
     private final String id;
 
-    // Artık final DEĞİL, değiştirilebilir
+
     private String title;
     private int year;
     private List<String> authors;
-    private String venue;
 
-    // Graf ilişkileri
-    private final List<Article> outNeighbors = new ArrayList<>(); // bu makalenin referans verdiği
-    private final List<Article> inNeighbors  = new ArrayList<>(); // bu makaleye referans veren
 
-    // En genel ctor: JSON’dan okurken kullanabiliriz
-    public Article(String id, String title, int year, List<String> authors, String venue) {
+    private final List<Article> outNeighbors = new ArrayList<>(); // referans verdikleri
+    private final List<Article> inNeighbors  = new ArrayList<>(); //referans verenler
+    //const
+    public Article(String id, String title, int year, List<String> authors) {
         this.id = id;
         this.title = title;
         this.year = year;
         this.authors = (authors != null) ? authors : new ArrayList<>();
-        this.venue = venue;
     }
 
-    // GraphLoader’ın "ensureArticle" için kullanacağı basit ctor
-    // (ilk başta sadece id ile oluşturup sonradan setTitle/setYear ile dolduracağız)
+
     public Article(String id) {
-        this(id, "", 0, new ArrayList<>(), "");
+        this(id, "", 0, new ArrayList<>());
     }
 
-    // ---- GETTER’LAR ----
+    //getterler
     public String getId()      { return id; }
     public String getTitle()   { return title; }
     public int getYear()       { return year; }
     public List<String> getAuthors() { return authors; }
-    public String getVenue()   { return venue; }
 
     public List<Article> getOutNeighbors() { return outNeighbors; }
     public List<Article> getInNeighbors()  { return inNeighbors; }
 
-    // ---- SETTER’LAR (GraphLoader için) ----
+    //setter
     public void setTitle(String title) {
         this.title = title;
     }
@@ -55,11 +50,7 @@ public class Article {
         this.authors = (authors != null) ? authors : new ArrayList<>();
     }
 
-    public void setVenue(String venue) {
-        this.venue = venue;
-    }
-
-    // ---- KOMŞU EKLEME (CitationGraph.addEdge için) ----
+    //in out neighbor ( atıf iliskileri ) ekleme
     public void addOutNeighbor(Article to) {
         if (!outNeighbors.contains(to)) {
             outNeighbors.add(to);

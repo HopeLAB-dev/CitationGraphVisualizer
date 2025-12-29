@@ -18,8 +18,8 @@ public class InfoPanel {
     private final TextArea selectedArea;
     private final Button removeButton;
 
-    // Analiz kutusu
-    private VBox analysisBox;
+    //analiz kutu
+    private final VBox analysisBox;
     private final TextField kField;
     private final Label kInfoLabel;
 
@@ -30,7 +30,7 @@ public class InfoPanel {
         root.setPrefWidth(320);
         root.setStyle("-fx-background-color: #1e1e1e;");
 
-        // Üstte genel istatistikler
+        //üsstteki genel istatikler
         globalLabel = new Label();
         globalLabel.setStyle("-fx-text-fill: white;");
         globalLabel.setWrapText(true);
@@ -39,7 +39,7 @@ public class InfoPanel {
         topBox.setPadding(new Insets(10));
         root.setTop(topBox);
 
-        // Ortada seçili makale detayları + kaldır butonu
+        //secili makale detayları ve kaldırma butonu
         selectedArea = new TextArea();
         selectedArea.setEditable(false);
         selectedArea.setWrapText(true);
@@ -61,7 +61,7 @@ public class InfoPanel {
         centerBox.setPadding(new Insets(10));
         root.setCenter(centerBox);
 
-        // --- Alt kısım: ID ile göster ---
+        // id ile bulma ve onun butonu
         TextField idField = new TextField();
         idField.setPromptText("Makale ID veya OpenAlex linki");
 
@@ -79,7 +79,7 @@ public class InfoPanel {
                 return;
             }
 
-            boolean ok = graphView.focusArticleById(raw, true);
+            boolean ok = graphView.focusArticleById(raw);
             if (ok) {
                 idInfoLabel.setText("Makale yüklendi ve seçildi.");
                 graphView.setLabelsEnabled(true);
@@ -88,7 +88,7 @@ public class InfoPanel {
             }
         });
 
-        // --- Analiz kutusu (k-core) ---
+        // kcore icin analiz butonu
         kField = new TextField();
         kField.setPromptText("k-core için k değeri");
 
@@ -121,7 +121,7 @@ public class InfoPanel {
         analysisBox.setVisible(false);
         analysisBox.setManaged(false);
 
-        // --- Analiz moduna giriş butonu ---
+        // analiz moduna gir
         Button analysisButton = new Button("Analiz Uygulamaları");
         analysisButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
         analysisButton.setOnAction(e -> {
@@ -131,7 +131,7 @@ public class InfoPanel {
             analysisBox.setManaged(true);
         });
 
-        // --- Görünümü sıfırla butonu ---
+        //GÖRÜNÜMÜ SIFIRLAMA TUŞU
         Button resetButton = new Button("Görünümü sıfırla");
         resetButton.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white;");
         resetButton.setOnAction(e -> {
@@ -154,7 +154,7 @@ public class InfoPanel {
         updateGlobalStats(new HashSet<>(graph.getArticles()));
     }
 
-    // Normal modda (analiz değilken) görünür graf istatistikleri
+    //normal modda graf istatistikleri
     public void updateGlobalStats(Set<Article> visibleNodes) {
         if (visibleNodes == null || visibleNodes.isEmpty()) {
             globalLabel.setText("Genel İstatistikler\n-------------------\nGraf boş.");
@@ -230,7 +230,7 @@ public class InfoPanel {
         globalLabel.setText(text);
     }
 
-    // Analiz modunda betweenness sonuçlarını göstermek için
+    // analiz modunda yukarıdaki degerlerin yerini betweennes sonucları alıyor
     public void showBetweennessResultsInteger(Set<Article> visibleNodes,
                                               Map<Article, Integer> betMap) {
         if (visibleNodes == null || visibleNodes.isEmpty()) {
@@ -240,7 +240,7 @@ public class InfoPanel {
 
         List<Map.Entry<Article, Integer>> list =
                 new ArrayList<>(betMap.entrySet());
-        // Azalan sırala
+        //ilk 10 azalan sırala
         list.sort((e1, e2) -> Integer.compare(e2.getValue(), e1.getValue()));
 
         StringBuilder sb = new StringBuilder();
@@ -262,6 +262,7 @@ public class InfoPanel {
     }
 
 
+
     public void updateSelected(Article selected, HIndexService.Result res) {
         if (selected == null) {
             clearSelected();
@@ -279,13 +280,13 @@ public class InfoPanel {
         sb.append("Yazar(lar): ").append(selected.getAuthors()).append("\n");
         sb.append("Alınan atıf (global): ").append(selected.getInNeighbors().size()).append("\n\n");
 
-        sb.append("h-index: ").append(res.hIndex).append("\n");
-        sb.append("h-median: ").append(res.hMedian).append("\n");
-        sb.append("h-core makale sayısı: ").append(res.hCore.size()).append("\n\n");
+        sb.append("h-index: ").append(res.hIndex()).append("\n");
+        sb.append("h-median: ").append(res.hMedian()).append("\n");
+        sb.append("h-core makale sayısı: ").append(res.hCore().size()).append("\n\n");
         sb.append("h-core ID'leri:\n");
-        for (Article a : res.hCore) {
-            sb.append(" - ").append(a.getId())
-                    .append(" (in=").append(a.getInNeighbors().size()).append(")\n");
+        for (Article a : res.hCore()) {
+            sb.append(" - ").append(a.getId()).append("\n");
+
         }
 
         selectedArea.setText(sb.toString());

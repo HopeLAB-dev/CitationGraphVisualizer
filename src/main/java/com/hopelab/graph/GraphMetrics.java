@@ -2,24 +2,28 @@ package com.hopelab.graph;
 
 import java.util.*;
 
-/**
- * Graf analiz metrikleri: betweenness centrality ve k-core decomposition.
- */
-public class GraphMetrics {
+// GRAF ANALİZ YONTEMLERİ & ALGORITMALAR
 
-    /**
-     * Grafı yönsüz kabul edip adjacency list çıkarıyoruz.
-     * Hem outNeighbors hem de inNeighbors üzerinden bağlantı kuruyoruz.
-     */
-    private static Map<Article, List<Article>> buildUndirectedAdj(CitationGraph graph) {
+public final class GraphMetrics {
+
+    private GraphMetrics() {
+
+    }
+
+    //grafı yönsüzleştirip düğümlerarası bağ
+    private static Map<Article, List<Article>> buildUndirectedAdjacency(CitationGraph graph) {
         Map<Article, List<Article>> adj = new HashMap<>();
+
+        // düğümler için yeni liste
         for (Article a : graph.getArticles()) {
             adj.put(a, new ArrayList<>());
         }
 
+        //okları yönsüz kenar yap
         for (Article a : graph.getArticles()) {
+
+
             for (Article b : a.getOutNeighbors()) {
-                // a -> b yönlü kenarı, yönsüz olarak a-b yap
                 if (!adj.get(a).contains(b)) {
                     adj.get(a).add(b);
                 }
@@ -27,8 +31,8 @@ public class GraphMetrics {
                     adj.get(b).add(a);
                 }
             }
+            //alınan atıf tekrar kontrol
             for (Article b : a.getInNeighbors()) {
-                // inNeighbors tarafı da kontrol edelim (ekstra güvenlik)
                 if (!adj.get(a).contains(b)) {
                     adj.get(a).add(b);
                 }
@@ -41,171 +45,10 @@ public class GraphMetrics {
         return adj;
     }
 
-    public static Map<Article, Double> betweennessUndirectedSubgraph(
-            CitationGraph graph,
-            Set<Article> nodes
-    ) {
-        // Brandes algoritması (undirected)
-        Map<Article, Double> CB = new HashMap<>();
-        for (Article v : nodes) {
-            CB.put(v, 0.0);
-        }
-
-        // Komşuluk listesi (yönsüz)
-        Map<Article, List<Article>> neighbors = new HashMap<>();
-        for (Article v : nodes) {
-            List<Article> list = new ArrayList<>();
-            for (Article w : v.getOutNeighbors()) {
-                if (nodes.contains(w)) {
-                    list.add(w);
-                }
-            }
-            for (Article w : v.getInNeighbors()) {
-                if (nodes.contains(w) && !list.contains(w)) {
-                    list.add(w);
-                }
-            }
-            neighbors.put(v, list);
-        }
-
-        for (Article s : nodes) {
-            Stack<Article> S = new Stack<>();
-            Map<Article, List<Article>> P = new HashMap<>();
-            Map<Article, Integer> dist = new HashMap<>();
-            Map<Article, Double> sigma = new HashMap<>();
-
-            for (Article v : nodes) {
-                P.put(v, new ArrayList<>());
-                dist.put(v, -1);
-                sigma.put(v, 0.0);
-            }
-
-            dist.put(s, 0);
-            sigma.put(s, 1.0);
-
-            Queue<Article> Q = new ArrayDeque<>();
-            Q.add(s);
-
-            while (!Q.isEmpty()) {
-                Article v = Q.remove();
-                S.push(v);
-                for (Article w : neighbors.get(v)) {
-                    if (dist.get(w) < 0) {
-                        dist.put(w, dist.get(v) + 1);
-                        Q.add(w);
-                    }
-                    if (dist.get(w).equals(dist.get(v) + 1)) {
-                        sigma.put(w, sigma.get(w) + sigma.get(v));
-                        P.get(w).add(v);
-                    }
-                }
-            }
-
-            Map<Article, Double> delta = new HashMap<>();
-            for (Article v : nodes) {
-                delta.put(v, 0.0);
-            }
-
-            while (!S.isEmpty()) {
-                Article w = S.pop();
-                for (Article v : P.get(w)) {
-                    double c = (sigma.get(v) / sigma.get(w)) * (1.0 + delta.get(w));
-                    delta.put(v, delta.get(v) + c);
-                }
-                if (!w.equals(s)) {
-                    CB.put(w, CB.get(w) + delta.get(w));
-                }
-            }
-        }
-
-        // undirected graf için çift sayımı önlemek için 2'ye böl
-        for (Article v : nodes) {
-            CB.put(v, CB.get(v) / 2.0);
-        }
-
-        return CB;
-    }
-
-
-    /**
-     * Brandes algoritmasının sade haliyle betweenness centrality.
-     * Sonuç: her Article için betweenness skor map'i.
-     */
-    public static Map<Article, Double> betweenness(CitationGraph graph) {
-        List<Article> nodes = new ArrayList<>(graph.getArticles());
-        Map<Article, Double> bc = new HashMap<>();
-        for (Article v : nodes) {
-            bc.put(v, 0.0);
-        }
-
-        Map<Article, List<Article>> adj = buildUndirectedAdj(graph);
-
-        for (Article s : nodes) {
-            Deque<Article> stack = new ArrayDeque<>();
-            Map<Article, List<Article>> pred = new HashMap<>();
-            Map<Article, Integer> dist = new HashMap<>();
-            Map<Article, Integer> sigma = new HashMap<>();
-
-            for (Article v : nodes) {
-                pred.put(v, new ArrayList<>());
-                dist.put(v, -1);
-                sigma.put(v, 0);
-            }
-
-            dist.put(s, 0);
-            sigma.put(s, 1);
-
-            Deque<Article> queue = new ArrayDeque<>();
-            queue.add(s);
-
-            // BFS ile en kısa yolları bul
-            while (!queue.isEmpty()) {
-                Article v = queue.removeFirst();
-                stack.push(v);
-                for (Article w : adj.get(v)) {
-                    // keşfedilmemiş düğüm
-                    if (dist.get(w) < 0) {
-                        dist.put(w, dist.get(v) + 1);
-                        queue.add(w);
-                    }
-                    // en kısa yollardan biri
-                    if (dist.get(w) == dist.get(v) + 1) {
-                        sigma.put(w, sigma.get(w) + sigma.get(v));
-                        pred.get(w).add(v);
-                    }
-                }
-            }
-
-            Map<Article, Double> delta = new HashMap<>();
-            for (Article v : nodes) {
-                delta.put(v, 0.0);
-            }
-
-            // Geriye doğru geçip katkıları topla
-            while (!stack.isEmpty()) {
-                Article w = stack.pop();
-                for (Article v : pred.get(w)) {
-                    if (sigma.get(w) != 0) {
-                        double c = ((double) sigma.get(v) / sigma.get(w)) * (1.0 + delta.get(w));
-                        delta.put(v, delta.get(v) + c);
-                    }
-                }
-                if (w != s) {
-                    bc.put(w, bc.get(w) + delta.get(w));
-                }
-            }
-        }
-
-        return bc;
-    }
-
-    /**
-     * k-core decomposition.
-     * Dönüş: k-core alt grafında kalan düğümler kümesi.
-     */
+    //kcore hesapları
     public static Set<Article> kCore(CitationGraph graph, int k) {
         List<Article> nodes = new ArrayList<>(graph.getArticles());
-        Map<Article, List<Article>> adj = buildUndirectedAdj(graph);
+        Map<Article, List<Article>> adj = buildUndirectedAdjacency(graph);
 
         Map<Article, Integer> degree = new HashMap<>();
         for (Article v : nodes) {
@@ -223,13 +66,16 @@ public class GraphMetrics {
 
         while (!queue.isEmpty()) {
             Article v = queue.removeFirst();
-            if (removed.contains(v)) continue;
+            if (removed.contains(v)) {
+                continue;
+            }
             removed.add(v);
 
             for (Article w : adj.get(v)) {
                 if (!removed.contains(w)) {
-                    degree.put(w, degree.get(w) - 1);
-                    if (degree.get(w) == k - 1) {
+                    int newDeg = degree.get(w) - 1;
+                    degree.put(w, newDeg);
+                    if (newDeg == k - 1) {
                         queue.add(w);
                     }
                 }
@@ -247,4 +93,94 @@ public class GraphMetrics {
     }
 
 
+    //yönsüz adajcemcy list
+    private static Map<Article, List<Article>> buildUndirectedAdjacencyForSubset(
+            Set<Article> subset
+    ) {
+        Map<Article, List<Article>> adj = new HashMap<>();
+        Set<Article> nodeSet = new HashSet<>(subset);
+
+        for (Article a : nodeSet) {
+            adj.put(a, new ArrayList<>());
+        }
+
+        for (Article a : nodeSet) {
+            // out neighbors
+            for (Article b : a.getOutNeighbors()) {
+                if (!nodeSet.contains(b)) continue;
+                List<Article> la = adj.get(a);
+                List<Article> lb = adj.get(b);
+                if (!la.contains(b)) la.add(b);
+                if (!lb.contains(a)) lb.add(a);
+            }
+            // in neighbors (yine yönsüz kabul ediyoruz)
+            for (Article b : a.getInNeighbors()) {
+                if (!nodeSet.contains(b)) continue;
+                List<Article> la = adj.get(a);
+                List<Article> lb = adj.get(b);
+                if (!la.contains(b)) la.add(b);
+                if (!lb.contains(a)) lb.add(a);
+            }
+        }
+
+        return adj;
+    }
+
+    //tamsayılı betweennes hesabı
+    public static Map<Article, Integer> integerBetweenness(
+            CitationGraph graph,
+            Set<Article> subset
+    ) {
+        List<Article> nodes = new ArrayList<>(subset);
+        int n = nodes.size();
+
+        Map<Article, Integer> result = new HashMap<>();
+        for (Article a : nodes) {
+            result.put(a, 0);
+        }
+
+        if (n == 0) return result;
+
+        Map<Article, List<Article>> adj = buildUndirectedAdjacencyForSubset(subset);
+
+        //her node için BFS
+        for (int i = 0; i < n; i++) {
+            Article s = nodes.get(i);
+
+            //BFS ICIN parent hashmapi
+            Map<Article, Article> parent = new HashMap<>();
+            ArrayDeque<Article> queue = new ArrayDeque<>();
+
+            parent.put(s, null);
+            queue.add(s);
+
+            while (!queue.isEmpty()) {
+                Article u = queue.removeFirst();
+                for (Article v : adj.getOrDefault(u, Collections.emptyList())) {
+                    if (!parent.containsKey(v)) {
+                        parent.put(v, u);
+                        queue.add(v);
+                    }
+                }
+            }
+
+            // s (kaynaktan) geriye doğru yürüt yolu
+            for (int j = i + 1; j < n; j++) {
+                Article t = nodes.get(j);
+                if (!parent.containsKey(t)) {
+                    //yol yoksa
+                    continue;
+                }
+
+                Article cur = parent.get(t);
+                while (cur != null && cur != s) {
+                    //ilk ve son dugum arası kısayoldaki her dugumö +1 puan alsın
+                    result.put(cur, result.get(cur) + 1);
+                    cur = parent.get(cur);
+                }
+            }
+        }
+
+        return result;
+    }
 }

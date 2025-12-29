@@ -21,7 +21,6 @@ public class MainApp extends Application {
     private Stage primaryStage;
     private BorderPane root;
 
-    // İstersen referans tutmak için:
     private CitationGraph graph;
     private GraphView graphView;
     private InfoPanel infoPanel;
@@ -35,7 +34,7 @@ public class MainApp extends Application {
         root = new BorderPane();
         root.setStyle("-fx-background-color: #202020;");
 
-        // Uygulama ilk açıldığında dosya seçme ekranı gelsin
+        // dosya secme ekranı
         showFileSelectScreen();
 
         Scene scene = new Scene(root, 1280, 720);
@@ -43,9 +42,7 @@ public class MainApp extends Application {
         stage.show();
     }
 
-    /**
-     * Başlangıç ekranı: ortada yazı + "JSON dosyası seç" butonu
-     */
+    //json dosyası sec butonu
     private void showFileSelectScreen() {
         VBox box = new VBox(10);
         box.setAlignment(Pos.CENTER);
@@ -63,10 +60,10 @@ public class MainApp extends Application {
         root.setRight(null); // InfoPanel yok, sadece seçim ekranı
     }
 
-    /**
-     * FileChooser aç, JSON dosyasını seçtir, GraphLoader.loadFromFile ile oku,
-     * sonra GraphView + InfoPanel’i oluştur.
-     */
+
+
+    //dosya secici ac, sectir, dosyayı graphloaderdeki ilgili fonksyonla oku, graphview ve infopanel olustur
+
     private void openJsonAndBuildGraph() {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Makale JSON dosyası seç");
@@ -76,12 +73,12 @@ public class MainApp extends Application {
 
         File file = chooser.showOpenDialog(primaryStage);
         if (file == null) {
-            // kullanıcı iptal etti
+            //secilmediyse
             return;
         }
 
         try {
-            // MANUEL JSON PARSER’LI GraphLoader:
+            //jsonu oku
             this.graph = GraphLoader.loadFromFile(file);
         } catch (IOException ex) {
             showError("JSON dosyası okunamadı", ex.getMessage());
@@ -91,7 +88,7 @@ public class MainApp extends Application {
             return;
         }
 
-        // Normalde eskiden yaptığımız kurulum:
+        //infopanel graphview olustur
         this.infoPanel = new InfoPanel(graph);
         this.graphView = new GraphView(graph, infoPanel);
         infoPanel.setGraphView(graphView);
@@ -100,6 +97,7 @@ public class MainApp extends Application {
         root.setRight(infoPanel.getRoot());
     }
 
+    //hata cıkarsa mesaj
     private void showError(String header, String content) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Hata");

@@ -6,28 +6,19 @@ import java.util.List;
 
 public class HIndexService {
 
-    public static class Result {
-        public final int hIndex;
-        public final List<Article> hCore;
-        public final int hMedian;
-
-        public Result(int hIndex, List<Article> hCore, int hMedian) {
-            this.hIndex = hIndex;
-            this.hCore = hCore;
-            this.hMedian = hMedian;
-        }
+    public record Result(int hIndex, List<Article> hCore, int hMedian) {
     }
 
     public static Result computeFor(Article target) {
-        // 1) Bu makaleye atıf yapanlar:
+        // parametredeki makaleye atıf yapanların arraylist
         List<Article> citing = new ArrayList<>(target.getInNeighbors());
 
-        // Atıf yapan makale yoksa her şey 0
+        // yoksa tüm sonuclar 0
         if (citing.isEmpty()) {
             return new Result(0, List.of(), 0);
         }
 
-        // 2) Bu makalelerin HER BİRİNİN aldığı atıf sayısı
+        //herbirini n aldıgı atıf sayısı
         citing.sort((a, b) -> Integer.compare(
                 b.getInNeighbors().size(),
                 a.getInNeighbors().size()
@@ -38,7 +29,7 @@ public class HIndexService {
             counts.add(a.getInNeighbors().size());
         }
 
-        // 3) h-index hesapla
+        // h-index hesapla
         int h = 0;
         for (int i = 0; i < counts.size(); i++) {
             int c = counts.get(i);
@@ -50,13 +41,13 @@ public class HIndexService {
             }
         }
 
-        // 4) h-core = ilk h makale
+        // h-core hesapla
         List<Article> hCore = new ArrayList<>();
         for (int i = 0; i < h && i < citing.size(); i++) {
             hCore.add(citing.get(i));
         }
 
-        // 5) h-median = h-core içindeki atıf sayılarının ortancası
+        // h-median yani h-core içindeki atıf sayılarının ortancasını hesapla
         int hMedian = 0;
         if (!hCore.isEmpty()) {
             List<Integer> hCoreCounts = new ArrayList<>();
@@ -68,11 +59,11 @@ public class HIndexService {
             if (n % 2 == 1) {
                 hMedian = hCoreCounts.get(n / 2);
             } else {
-                // çift sayıda ise, ortadaki iki değerden büyük olanı al
+                // çift sayıysa buyuk olanı al
                 hMedian = hCoreCounts.get(n / 2);
             }
         }
-
+        //sonucları dondr
         return new Result(h, hCore, hMedian);
     }
 }

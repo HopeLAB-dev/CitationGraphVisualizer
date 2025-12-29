@@ -9,18 +9,7 @@ public final class GraphLoader {
     private GraphLoader() {
     }
 
-    // 1) Kaynaktan okuma (eskiden kullandığın gibi kalabilir)
-    public static CitationGraph loadFromResource(String resourceName) throws IOException {
-        InputStream is = GraphLoader.class.getResourceAsStream("/" + resourceName);
-        if (is == null) {
-            throw new FileNotFoundException("Resource bulunamadı: " + resourceName);
-        }
-        try (Reader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
-            return loadFromReader(reader);
-        }
-    }
-
-    // 2) Dışarıdan seçilen JSON dosyası
+    //json seçme metordu
     public static CitationGraph loadFromFile(File file) throws IOException {
         try (Reader reader = new InputStreamReader(
                 new FileInputStream(file), StandardCharsets.UTF_8)) {
@@ -28,14 +17,14 @@ public final class GraphLoader {
         }
     }
 
-    // Ortak: Reader -> String -> Elle JSON parse -> CitationGraph
+    //jsondan okuma metodu
     private static CitationGraph loadFromReader(Reader reader) throws IOException {
         String json = readAll(reader);
 
-        // 1) Top-level array içindeki {} object'leri ayır
+        //{}leri ayraç olarak ayır
         List<String> objectStrings = splitTopLevelObjects(json);
 
-        // 2) Önce tüm makaleleri parse et (id, title, year, referenced_works)
+        //tüm makaleleri ayır
         List<ParsedArticle> parsed = new ArrayList<>();
         for (String obj : objectStrings) {
             ParsedArticle pa = parseOneArticle(obj);
@@ -44,11 +33,11 @@ public final class GraphLoader {
             }
         }
 
-        // 3) Article ve kenarları CitationGraph'a çevir
+        //Article ve kenarları CitationGraph'a çevir
         CitationGraph graph = new CitationGraph();
         Map<String, Article> idMap = new HashMap<>();
 
-        // 3a) Düğümleri oluştur
+        //düğüm oluştur
         for (ParsedArticle pa : parsed) {
             Article a = graph.ensureArticle(pa.idShort);
 
@@ -61,15 +50,12 @@ public final class GraphLoader {
             if (pa.authors != null && !pa.authors.isEmpty()) {
                 a.setAuthors(pa.authors);
             }
-            if (pa.venue != null) {
-                a.setVenue(pa.venue);
-            }
 
             idMap.put(pa.idShort, a);
         }
 
 
-        // 3b) Kenarları ekle
+        //kenar ekle
         for (ParsedArticle pa : parsed) {
             Article from = idMap.get(pa.idShort);
             if (from == null) continue;
@@ -84,7 +70,9 @@ public final class GraphLoader {
         return graph;
     }
 
-    // Reader'dan tüm metni oku
+    //OKUMA İÇİN YARDIMCI FONKSIYONLAR
+
+    //tüm metni oku
     private static String readAll(Reader reader) throws IOException {
         StringBuilder sb = new StringBuilder();
         char[] buf = new char[8192];
@@ -95,15 +83,7 @@ public final class GraphLoader {
         return sb.toString();
     }
 
-    // ----------------------------------------------------
-    // Elle JSON parse kısmı
-    // ----------------------------------------------------
-
-    /**
-     * json: "[ {...}, {...}, ... ]" gibi bir şey.
-     * Bu fonksiyon köşeli parantezlerin içindeki her {} object'i
-     * string olarak ayırır.
-     */
+    //ayırma fonksiyonu {}
     private static List<String> splitTopLevelObjects(String json) {
         List<String> result = new ArrayList<>();
 
@@ -112,12 +92,12 @@ public final class GraphLoader {
         int n = json.length();
         int i = 0;
 
-        // baştaki whitespace'leri at
+        // baştaki whitespaceleri at
         while (i < n && Character.isWhitespace(json.charAt(i))) i++;
-        // '[' karakterine kadar git
+        //[ karakterine kadar git
         while (i < n && json.charAt(i) != '[') i++;
         if (i >= n) return result;
-        i++; // '[' sonrası
+        i++; //[ sonrası
 
         int braceDepth = 0;
         boolean inString = false;
@@ -150,7 +130,7 @@ public final class GraphLoader {
         return result;
     }
 
-    // JSON'daki tek bir {} object'i bizim işimize yarayan alanlara parse eder
+    //{} ile ayrılmış kısımları da ayır yıl title id vs oalark
     private static ParsedArticle parseOneArticle(String obj) {
         if (obj == null || obj.isEmpty()) return null;
 
@@ -160,9 +140,7 @@ public final class GraphLoader {
         String title = extractStringField(obj, "\"title\"");
         Integer year = extractIntField(obj, "\"year\"");
 
-        // YENİ: authors ve venue
         List<String> authors = extractStringArrayField(obj, "\"authors\"");
-        String venue = extractStringField(obj, "\"venue\"");
 
         List<String> referenced = extractStringArrayField(obj, "\"referenced_works\"");
         List<String> refShorts = new ArrayList<>();
@@ -174,18 +152,16 @@ public final class GraphLoader {
         }
 
         ParsedArticle pa = new ParsedArticle();
-        pa.idFull = fullId;
         pa.idShort = idShort;
         pa.title = title;
         pa.year = year;
         pa.authors = authors;        // YENİ
-        pa.venue = venue;            // YENİ
         pa.referencedShortIds = refShorts;
         return pa;
     }
 
 
-    // "fieldName": "value" şeklinde bir string alanı çıkar
+    // alan adı
     private static String extractStringField(String obj, String fieldName) {
         int idx = obj.indexOf(fieldName);
         if (idx == -1) return null;
@@ -198,15 +174,15 @@ public final class GraphLoader {
         int n = obj.length();
         while (idx < n && Character.isWhitespace(obj.charAt(idx))) idx++;
         if (idx >= n || obj.charAt(idx) != '"') return null;
-        idx++; // ilk çift tırnak sonrası
+        idx++;
 
         StringBuilder sb = new StringBuilder();
         boolean escape = false;
         while (idx < n) {
             char c = obj.charAt(idx);
             if (escape) {
-                // basit escape: \" -> "
-                // \\ -> \
+
+
                 sb.append(c);
                 escape = false;
             } else {
@@ -223,7 +199,7 @@ public final class GraphLoader {
         return sb.toString();
     }
 
-    // "fieldName": 2020 gibi bir integer alanı çıkar
+    // alan adı
     private static Integer extractIntField(String obj, String fieldName) {
         int idx = obj.indexOf(fieldName);
         if (idx == -1) return null;
@@ -250,7 +226,7 @@ public final class GraphLoader {
         }
     }
 
-    // "fieldName": ["...", "...", ...] şeklindeki string array'i çıkar
+    // string array cıkarma
     private static List<String> extractStringArrayField(String obj, String fieldName) {
         List<String> result = new ArrayList<>();
 
@@ -264,7 +240,7 @@ public final class GraphLoader {
         int n = obj.length();
         while (idx < n && Character.isWhitespace(obj.charAt(idx))) idx++;
         if (idx >= n || obj.charAt(idx) != '[') return result;
-        idx++; // '[' sonrası
+        idx++; // [ sonrası
 
         boolean inString = false;
         boolean escape = false;
@@ -301,7 +277,7 @@ public final class GraphLoader {
         return result;
     }
 
-    // OpenAlex linklerinden son slash'tan sonraki kısmı çıkar ("W2502277634" vs.)
+    //id linkinde slashtan sonraki kısmı cıkar
     private static String extractIdShort(String full) {
         if (full == null) return null;
         int slash = full.lastIndexOf('/');
@@ -311,15 +287,13 @@ public final class GraphLoader {
         return full;
     }
 
-    // Bu sadece parse edilen geçici veri için kullandığımız sınıf
+    // veri icin sınıf
     private static class ParsedArticle {
-        String idFull;
         String idShort;
         String title;
         Integer year;
 
-        List<String> authors = new ArrayList<>();    // YENİ
-        String venue;                                // istersen kullanırsın
+        List<String> authors = new ArrayList<>();
 
         List<String> referencedShortIds = new ArrayList<>();
     }

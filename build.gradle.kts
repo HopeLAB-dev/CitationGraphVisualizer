@@ -25,7 +25,7 @@ javafx {
     modules = listOf("javafx.controls")
 }
 
-// Uygulamanın ana sınıfı (MainApp burada olmalı)
+//uygulamanın ana sınıfı(mainapp.java)
 application {
     mainClass.set("com.hopelab.graph.MainApp")
 }
