@@ -1,4 +1,8 @@
-import com.hopelab.graph.*;
+import com.hopelab.graph.model.Article;
+import com.hopelab.graph.model.CitationGraph;
+import com.hopelab.graph.service.GraphLoader;
+import com.hopelab.graph.service.GraphMetrics;
+import com.hopelab.graph.service.HIndexService;
 
 import java.util.Scanner;
 
@@ -6,8 +10,8 @@ public class MainTest {
     public static void main(String[] args) {
         CitationGraph graph = GraphLoader.loadFromResource("articles.json");
 
-        System.out.println("Node count   : " + graph.getNodeCount());
-        System.out.println("Edge count   : " + graph.getEdgeCount());
+        System.out.println("Node count   : " + graph.getArticles().size());
+        System.out.println("Edge count   : " + calculateEdgeCount(graph));
 
         Scanner scanner = new Scanner(System.in);
         System.out.print("H-index hesaplanacak makale id: ");
@@ -20,11 +24,11 @@ public class MainTest {
         }
 
         HIndexService.Result res = HIndexService.computeFor(target);
-        System.out.println("h-index  : " + res.hIndex);
-        System.out.println("h-median : " + res.hMedian);
-        System.out.println("h-core makale sayısı: " + res.hCore.size());
+        System.out.println("h-index  : " + res.hIndex());
+        System.out.println("h-median : " + res.hMedian());
+        System.out.println("h-core makale sayısı: " + res.hCore().size());
         System.out.println("h-core:");
-        for (Article a : res.hCore) {
+        for (Article a : res.hCore()) {
             System.out.println("  " + a.getId() + " (in=" + a.getInNeighbors().size() + ")");
         }
         // --- Tüm graf içinde en büyük h-index'i bulma (bunu zaten eklemiştik, kalsın) ---
@@ -32,8 +36,8 @@ public class MainTest {
         Article best = null;
         for (Article a : graph.getArticles()) {
             HIndexService.Result r = HIndexService.computeFor(a);
-            if (r.hIndex > maxH) {
-                maxH = r.hIndex;
+            if (r.hIndex() > maxH) {
+                maxH = r.hIndex();
                 best = a;
             }
         }
@@ -75,6 +79,12 @@ public class MainTest {
         System.out.println("k-core düğüm sayısı (degree >= " + k + "): " + core.size());
 
     }
+
+    private static int calculateEdgeCount(CitationGraph graph) {
+        int count = 0;
+        for (Article a : graph.getArticles()) {
+            count += a.getOutNeighbors().size();
+        }
+        return count;
+    }
 }
-
-
