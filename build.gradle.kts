@@ -27,5 +27,5 @@ javafx {
 
 //uygulamanın ana sınıfı(mainapp.java)
 application {
-    mainClass.set("com.hopelab.graph.MainApp")
+    mainClass.set("com.hopelab.graph.ui.MainApp")
 }
