@@ -2,7 +2,7 @@
 
 ![Java](https://img.shields.io/badge/Java-21%2B-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
 ![Gradle](https://img.shields.io/badge/Gradle-8.0%2B-02303A?style=for-the-badge&logo=gradle&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
+![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)
 
 [🇹🇷 Türkçe](#-türkçe) | [🇬🇧 English](#-english)
 
@@ -138,4 +138,4 @@ gradlew.bat run
 
 ## 📄 License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+This project is licensed under the GNU GPLv3 License. See the [LICENSE](LICENSE) file for details.
